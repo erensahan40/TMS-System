@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { CargoItem } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, getCompanyId } from '@/lib/api/middleware'
 import { autoPack, PackingItem } from '@/lib/packing/auto-pack'
@@ -41,8 +40,8 @@ export async function POST(
       return NextResponse.json({ error: 'No cargo items provided' }, { status: 400 })
     }
 
-    // Convert to packing items
-    const packingItems: PackingItem[] = cargoItems.map((item: CargoItem) => ({
+    // Convert to packing items (type from query result - no Prisma client export needed)
+    const packingItems: PackingItem[] = cargoItems.map((item: (typeof cargoItems)[number]) => ({
       id: item.id,
       cargoItem: {
         id: item.id,
