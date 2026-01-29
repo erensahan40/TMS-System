@@ -15,6 +15,7 @@ describe('autoPack', () => {
         cargoItem: {
           id: 'item1',
           isStackable: true,
+          isFragile: false,
           thisSideUp: false,
         },
         dimensions: {
@@ -44,6 +45,7 @@ describe('autoPack', () => {
         cargoItem: {
           id: 'item1',
           isStackable: true,
+          isFragile: false,
           thisSideUp: false,
         },
         dimensions: { length: 1200, width: 800, height: 1440 },
@@ -64,6 +66,7 @@ describe('autoPack', () => {
         cargoItem: {
           id: 'item1',
           isStackable: false,
+          isFragile: false,
           thisSideUp: false,
         },
         dimensions: { length: 1200, width: 800, height: 1440 },

@@ -60,7 +60,7 @@ export function calculateRouteEta(
   const durationFromIndex = (fromIdx: number) =>
     sorted
       .slice(fromIdx)
-      .reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0)
+      .reduce((sum: number, s: RouteStopInput) => sum + (s.durationMinutes ?? 0), 0)
 
   let current = new Date(startAt.getTime())
   let driveMinutesSinceBreak = 0

@@ -113,7 +113,7 @@ function validateWeight(context: ValidationContext): ValidationRule[] {
   const rules: ValidationRule[] = []
   const { boxes, trailer } = context
 
-  const totalWeight = boxes.reduce((sum, box) => sum + box.weight, 0)
+  const totalWeight = boxes.reduce((sum: number, box: LoadPlanItem) => sum + box.weight, 0)
 
   if (totalWeight > trailer.maxPayload) {
     rules.push({
@@ -246,7 +246,7 @@ function findBoxBelow(box: LoadPlanItem, belowBoxes: LoadPlanItem[]): LoadPlanIt
 function calculateWeightAbove(box: LoadPlanItem, allBoxes: LoadPlanItem[]): number {
   return allBoxes
     .filter((b) => b.stackLevel > box.stackLevel && boxesOverlapXY(box, b))
-    .reduce((sum, b) => sum + b.weight, 0)
+    .reduce((sum: number, b: LoadPlanItem) => sum + b.weight, 0)
 }
 
 function calculateHeightAbove(box: LoadPlanItem, allBoxes: LoadPlanItem[]): number {
