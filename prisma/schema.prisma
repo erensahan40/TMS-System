@@ -1,0 +1,379 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Authentication & Authorization
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String?  // Hashed password
+  role      UserRole @default(PLANNER)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+
+  @@index([companyId])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+enum UserRole {
+  ADMIN
+  PLANNER
+  WAREHOUSE
+  READ_ONLY
+}
+
+// Multi-tenant
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  trailers   Trailer[]
+  trucks     Truck[]
+  shipments  Shipment[]
+  loadPlans  LoadPlan[]
+  cargoItems CargoItem[]
+
+  @@map("companies")
+}
+
+// Fleet Management
+model Trailer {
+  id              String        @id @default(cuid())
+  companyId       String
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name            String
+  type            TrailerType
+  model           String?
+  licensePlate    String?       @unique
+  internalLength  Int           // mm
+  internalWidth   Int           // mm
+  internalHeight  Int           // mm
+  doorWidth       Int?          // mm
+  doorHeight      Int?          // mm
+  maxPayload      Int           // kg
+  maxAxleLoad     Int?          // kg (simpele indicatie)
+  maxStackHeight  Int?          // mm
+  hasWheelArches  Boolean       @default(false)
+  wheelArchHeight Int?          // mm
+  wheelArchWidth  Int?          // mm
+  hasRails        Boolean       @default(false)
+  railSpacing     Int?          // mm
+  temperatureMin  Float?        // °C (voor frigo)
+  temperatureMax  Float?        // °C (voor frigo)
+  temperatureZones Json?        // Array van {name: string, x: number, y: number, width: number, height: number, tempMin: number, tempMax: number}
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  loadPlans LoadPlan[]
+
+  @@index([companyId])
+  @@index([type])
+  @@map("trailers")
+}
+
+enum TrailerType {
+  BACHE        // Bâche / Tautliner
+  FRIGO        // Frigo / Reefer
+  STUKGOED     // Stukgoedwagen / Box truck
+  CONTAINER_20 // 20ft container (optioneel)
+  CONTAINER_40 // 40ft container (optioneel)
+  MEGA         // Mega trailer (optioneel)
+  DUBBELDEK    // Dubbeldek (optioneel)
+  LZV          // LZV (optioneel)
+}
+
+model Truck {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  licensePlate String? @unique
+  driverName  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shipments Shipment[]
+
+  @@index([companyId])
+  @@map("trucks")
+}
+
+// Cargo Management
+model CargoItem {
+  id            String   @id @default(cuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  palletType    PalletType?
+  length        Int      // mm
+  width         Int      // mm
+  height        Int      // mm
+  weight        Int      // kg
+  isStackable   Boolean  @default(true)
+  maxStackWeight Int?    // kg (max gewicht dat bovenop mag)
+  maxStackHeight Int?    // mm (max stapelhoogte)
+  isFragile     Boolean  @default(false)
+  adrClass      String?  // ADR klasse (bijv. "3", "4.1", "8")
+  temperatureMin Float?  // °C
+  temperatureMax Float?  // °C
+  thisSideUp    Boolean  @default(false)
+  noClamp       Boolean  @default(false)
+  barcode       String?
+  sku           String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  loadPlanItems LoadPlanItem[]
+
+  @@index([companyId])
+  @@index([palletType])
+  @@map("cargo_items")
+}
+
+enum PalletType {
+  EURO_1200x800
+  BLOCK_1200x1000
+  CUSTOM
+  NO_PALLET
+}
+
+// Shipments & Stops
+model Shipment {
+  id          String        @id @default(cuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reference   String        @unique
+  status      ShipmentStatus @default(DRAFT)
+  truckId     String?
+  truck       Truck?        @relation(fields: [truckId], references: [id], onDelete: SetNull)
+  trailerId   String?
+  trailer     Trailer?      @relation(fields: [trailerId], references: [id], onDelete: SetNull)
+  plannedDate DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  stops       Stop[]
+  loadPlans   LoadPlan[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([plannedDate])
+  @@map("shipments")
+}
+
+enum ShipmentStatus {
+  DRAFT
+  PLANNED
+  CONFIRMED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+model Stop {
+  id          String   @id @default(cuid())
+  shipmentId  String
+  shipment    Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  type        StopType
+  sequence    Int      // Volgorde in route
+  address     String
+  city        String
+  postalCode  String
+  country     String   @default("NL")
+  contactName String?
+  contactPhone String?
+  timeWindowStart DateTime?
+  timeWindowEnd   DateTime?
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shipmentId])
+  @@map("stops")
+}
+
+enum StopType {
+  PICKUP
+  DELIVERY
+}
+
+// Load Planning
+model LoadPlan {
+  id          String        @id @default(cuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shipmentId  String?
+  shipment    Shipment?     @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  trailerId   String
+  trailer     Trailer       @relation(fields: [trailerId], references: [id], onDelete: Restrict)
+  name        String
+  version     Int           @default(1)
+  status      LoadPlanStatus @default(DRAFT)
+  notes       String?       @db.Text
+  totalWeight Int           @default(0) // kg
+  totalVolume Int           @default(0) // mm³
+  utilization Float         @default(0) // percentage
+  centerOfGravityX Float?   // mm (relatief tot trailer)
+  centerOfGravityY Float?   // mm
+  centerOfGravityZ Float?   // mm
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  createdById String?
+  createdBy   User?         @relation("LoadPlanCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  items       LoadPlanItem[]
+  validations LoadPlanValidation[]
+  auditLogs   AuditLog[]
+
+  @@index([companyId])
+  @@index([shipmentId])
+  @@index([trailerId])
+  @@index([status])
+  @@map("load_plans")
+}
+
+enum LoadPlanStatus {
+  DRAFT
+  PLANNED
+  CONFIRMED
+  EXECUTED
+}
+
+model LoadPlanItem {
+  id          String   @id @default(cuid())
+  loadPlanId  String
+  loadPlan    LoadPlan @relation(fields: [loadPlanId], references: [id], onDelete: Cascade)
+  cargoItemId String
+  cargoItem   CargoItem @relation(fields: [cargoItemId], references: [id], onDelete: Restrict)
+  quantity    Int      @default(1)
+  positionX   Float    // mm (relatief tot trailer start)
+  positionY   Float    // mm
+  positionZ   Float    // mm (hoogte vanaf vloer)
+  rotation    Float    @default(0) // graden rond Z-as (0, 90, 180, 270)
+  stackLevel  Int      @default(0) // 0 = vloer, 1+ = gestapeld
+  stopSequence Int?    // Voor welke stop dit item geladen wordt (LIFO/FIFO)
+  batchLot    String?
+  orderRef    String?
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([loadPlanId])
+  @@index([cargoItemId])
+  @@map("load_plan_items")
+}
+
+model LoadPlanValidation {
+  id          String            @id @default(cuid())
+  loadPlanId  String
+  loadPlan    LoadPlan          @relation(fields: [loadPlanId], references: [id], onDelete: Cascade)
+  type        ValidationType
+  severity    ValidationSeverity
+  message     String
+  itemId      String?           // Optioneel: specifiek item
+  resolved    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+
+  @@index([loadPlanId])
+  @@index([resolved])
+  @@map("load_plan_validations")
+}
+
+enum ValidationType {
+  BOUNDARY_EXCEEDED
+  COLLISION
+  WEIGHT_EXCEEDED
+  AXLE_LOAD_WARNING
+  HEIGHT_EXCEEDED
+  STACKING_VIOLATION
+  TEMPERATURE_ZONE_MISMATCH
+  ADR_CONFLICT
+  FRAGILE_PLACEMENT
+  CENTER_OF_GRAVITY_WARNING
+}
+
+enum ValidationSeverity {
+  ERROR
+  WARNING
+  INFO
+}
+
+// Audit Trail
+model AuditLog {
+  id          String   @id @default(cuid())
+  loadPlanId  String?
+  loadPlan    LoadPlan? @relation(fields: [loadPlanId], references: [id], onDelete: Cascade)
+  userId      String?
+  action      String   // CREATE, UPDATE, DELETE, VALIDATE, EXPORT, etc.
+  entityType  String   // LoadPlan, LoadPlanItem, etc.
+  entityId    String?
+  changes     Json?    // Before/after values
+  metadata    Json?    // Extra context
+  createdAt   DateTime @default(now())
+
+  @@index([loadPlanId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
