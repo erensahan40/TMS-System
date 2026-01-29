@@ -1,6 +1,6 @@
 'use client'
 
-import { Trailer, CargoItem } from '@prisma/client'
+import type { Trailer, CargoItem } from '@/types/load-plan'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDimension, formatWeight, calculateVolume, volumeToCubicMeters } from '@/lib/utils'
 
@@ -24,11 +24,12 @@ export function LoadPlanStats({ trailer, items }: LoadPlanStatsProps) {
   }
 
   const totalWeight = items.reduce(
-    (sum, item) => sum + item.cargoItem.weight * item.quantity,
+    (sum: number, item: (typeof items)[number]) =>
+      sum + item.cargoItem.weight * item.quantity,
     0
   )
   const totalVolume = items.reduce(
-    (sum, item) =>
+    (sum: number, item: (typeof items)[number]) =>
       sum +
       calculateVolume(
         item.cargoItem.length,

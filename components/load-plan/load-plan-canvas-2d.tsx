@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { Stage, Layer, Rect, Group, Text, Line } from 'react-konva'
 import type Konva from 'konva'
-import type { Trailer, CargoItem } from '@prisma/client'
+import type { Trailer, CargoItem } from '@/types/load-plan'
 import { formatDimension } from '@/lib/utils'
 
 interface LoadPlanItem {

@@ -9,7 +9,7 @@ import { CargoList } from './cargo-list'
 import { LoadPlanProperties } from './load-plan-properties'
 import { LoadPlanToolbar } from './load-plan-toolbar'
 import { LoadPlanStats } from './load-plan-stats'
-import { Trailer, CargoItem, LoadPlan } from '@prisma/client'
+import type { Trailer, CargoItem, LoadPlan } from '@/types/load-plan'
 
 type LoadPlanWithItems = LoadPlan & {
   trailer: Trailer

@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Trailer } from '@prisma/client'
+import type { Trailer } from '@/types/load-plan'
 import { Save, Check, RotateCw, AlertTriangle, Download } from 'lucide-react'
 
 interface LoadPlanToolbarProps {

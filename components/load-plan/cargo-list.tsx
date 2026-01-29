@@ -1,6 +1,6 @@
 'use client'
 
-import { CargoItem } from '@prisma/client'
+import type { CargoItem } from '@/types/load-plan'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDimension, formatWeight } from '@/lib/utils'
 import { Package, Snowflake, AlertTriangle } from 'lucide-react'
