@@ -33,7 +33,7 @@ export async function POST(
 
     // Convert to validation context
     const context: ValidationContext = {
-      boxes: loadPlan.items.map((item) => ({
+      boxes: loadPlan.items.map((item: (typeof loadPlan.items)[number]) => ({
         id: item.id,
         position: {
           x: item.positionX,
