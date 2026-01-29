@@ -50,9 +50,13 @@ export async function PATCH(
       include: { cargoItem: true },
     })
 
-    const totalWeight = items.reduce((sum, item) => sum + item.cargoItem.weight * item.quantity, 0)
+    const totalWeight = items.reduce(
+      (sum: number, item: (typeof items)[number]) =>
+        sum + item.cargoItem.weight * item.quantity,
+      0
+    )
     const totalVolume = items.reduce(
-      (sum, item) =>
+      (sum: number, item: (typeof items)[number]) =>
         sum +
         item.cargoItem.length *
           item.cargoItem.width *
