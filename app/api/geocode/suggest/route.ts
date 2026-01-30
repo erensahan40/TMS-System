@@ -55,9 +55,11 @@ async function fetchOrsFeatures(
   const data = (await res.json()) as { type?: string; features?: ORSFeature[] }
   const features = Array.isArray(data.features) ? data.features : []
   return features
-    .filter((f) => f.geometry?.coordinates?.length >= 2)
+    .filter((f): f is ORSFeature & { geometry: { coordinates: [number, number] } } =>
+      Array.isArray(f.geometry?.coordinates) && f.geometry.coordinates.length >= 2
+    )
     .map((f): SuggestItem => {
-      const [lng, lat] = f.geometry!.coordinates
+      const [lng, lat] = f.geometry.coordinates
       const props = f.properties ?? {}
       const layer = typeof props.layer === 'string' ? props.layer : ''
       const name = typeof props.name === 'string' ? props.name.trim() : ''
