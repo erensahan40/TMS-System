@@ -29,8 +29,12 @@ export interface RouteStopInput {
 
 export interface RouteStopWithEta extends RouteStopInput {
   eta: Date
+  /** Rijtijd vanaf vorige stop (zonder pauzes), in minuten */
   driveMinutesFromPrev: number
+  /** Totaal pauzetijd (45 min per pauze) vóór aankomst bij deze stop, in minuten */
   breakMinutesBefore: number
+  /** Aantal verplichte pauzes (45 min) onderweg tussen vorige stop en deze stop (bij rit > 4,5 u) */
+  breaksInLeg: number
   isNewDay?: boolean
   /** Resterende rijtijd tot volgende verplichte pauze (max 4,5u), in minuten */
   remainingDriveMinutesUntilBreak: number
@@ -78,6 +82,7 @@ export function calculateRouteEta(
         eta: new Date(current.getTime()),
         driveMinutesFromPrev: 0,
         breakMinutesBefore: 0,
+        breaksInLeg: 0,
         remainingDriveMinutesUntilBreak: MAX_DRIVE_BEFORE_BREAK_MINUTES,
         remainingDriveMinutesToday: MAX_DRIVE_PER_DAY_MINUTES,
         stopDurationMinutes: stopDuration,
@@ -92,25 +97,37 @@ export function calculateRouteEta(
     }
 
     const distanceKm = stop.distanceKm
-    const driveMinutes = distanceKm > 0 ? Math.round((distanceKm / speedKmh) * 60) : 0
+    const driveMinutesTotal = distanceKm > 0 ? Math.round((distanceKm / speedKmh) * 60) : 0
     let breakBefore = 0
+    let breaksInLeg = 0
     let isNewDay = false
+    let remainingDriveThisLeg = driveMinutesTotal
 
-    if (driveMinutesSinceBreak >= MAX_DRIVE_BEFORE_BREAK_MINUTES && driveMinutes > 0) {
-      current = new Date(current.getTime() + BREAK_DURATION_MINUTES * 60 * 1000)
-      driveMinutesSinceBreak = 0
-      breakBefore = BREAK_DURATION_MINUTES
+    // Rijtijd in stukken: na max 4,5 u rijden verplicht 45 min pauze; na max 9 u per dag 11 u rust
+    while (remainingDriveThisLeg > 0) {
+      if (driveMinutesSinceBreak >= MAX_DRIVE_BEFORE_BREAK_MINUTES) {
+        current = new Date(current.getTime() + BREAK_DURATION_MINUTES * 60 * 1000)
+        driveMinutesSinceBreak = 0
+        breakBefore += BREAK_DURATION_MINUTES
+        breaksInLeg += 1
+        continue
+      }
+      if (driveMinutesToday >= MAX_DRIVE_PER_DAY_MINUTES) {
+        current = new Date(current.getTime() + DAILY_REST_MINUTES * 60 * 1000)
+        driveMinutesToday = 0
+        driveMinutesSinceBreak = 0
+        isNewDay = true
+        continue
+      }
+      const canDriveUntilBreak = MAX_DRIVE_BEFORE_BREAK_MINUTES - driveMinutesSinceBreak
+      const canDriveToday = MAX_DRIVE_PER_DAY_MINUTES - driveMinutesToday
+      const chunk = Math.min(remainingDriveThisLeg, canDriveUntilBreak, canDriveToday)
+      if (chunk <= 0) continue
+      current = new Date(current.getTime() + chunk * 60 * 1000)
+      driveMinutesSinceBreak += chunk
+      driveMinutesToday += chunk
+      remainingDriveThisLeg -= chunk
     }
-    if (driveMinutesToday + driveMinutes >= MAX_DRIVE_PER_DAY_MINUTES && driveMinutes > 0) {
-      current = new Date(current.getTime() + DAILY_REST_MINUTES * 60 * 1000)
-      driveMinutesToday = 0
-      driveMinutesSinceBreak = 0
-      isNewDay = true
-    }
-
-    current = new Date(current.getTime() + driveMinutes * 60 * 1000)
-    driveMinutesSinceBreak += driveMinutes
-    driveMinutesToday += driveMinutes
 
     const remainingUntilBreak = Math.max(0, MAX_DRIVE_BEFORE_BREAK_MINUTES - driveMinutesSinceBreak)
     const remainingToday = Math.max(0, MAX_DRIVE_PER_DAY_MINUTES - driveMinutesToday)
@@ -120,8 +137,9 @@ export function calculateRouteEta(
     result.push({
       ...stop,
       eta: new Date(current.getTime()),
-      driveMinutesFromPrev: driveMinutes,
+      driveMinutesFromPrev: driveMinutesTotal,
       breakMinutesBefore: breakBefore,
+      breaksInLeg,
       isNewDay,
       remainingDriveMinutesUntilBreak: remainingUntilBreak,
       remainingDriveMinutesToday: remainingToday,

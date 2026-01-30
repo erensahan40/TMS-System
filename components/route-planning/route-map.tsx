@@ -14,7 +14,7 @@ const RouteMapInner = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex min-h-[480px] items-center justify-center bg-slate-100">
+      <div className="flex min-h-[280px] items-center justify-center bg-slate-100">
         <div className="flex flex-col items-center gap-3 text-slate-600">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
           <p className="text-sm font-medium">Kaart wordt geladen...</p>

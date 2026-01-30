@@ -92,7 +92,7 @@ export function RouteMapInner({ stops }: RouteMapInnerProps) {
   const linePositions = routeCoordinates ?? straightLine
 
   return (
-    <div className="route-map-container h-[480px] w-full overflow-hidden">
+    <div className="route-map-container h-[280px] w-full overflow-hidden">
       <MapContainer
         center={NETHERLANDS_CENTER}
         zoom={7}
